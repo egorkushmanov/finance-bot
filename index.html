@@ -5,13 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Финансовый Трекер</title>
   
-  <!-- Подключаем Telegram WebApp SDK -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  
-  <!-- Подключаем красивый шрифт Inter -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  
-  <!-- Подключаем иконки Boxicons -->
   <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
 
   <style>
@@ -64,7 +59,6 @@
     .view { display: none; }
     .view.active { display: block; }
 
-    /* Дизайн карточек (Glassmorphism) */
     .card {
       background: var(--card-bg);
       border: 1px solid var(--card-border);
@@ -91,14 +85,12 @@
       gap: 6px;
     }
 
-    /* Главный блок с градусником */
     .dashboard {
       display: flex;
       align-items: center;
       gap: 24px;
     }
 
-    /* Градусник */
     .thermo-container {
       width: 28px;
       height: 160px;
@@ -121,7 +113,6 @@
       position: relative;
     }
     
-    /* Блик на ртути */
     .thermo-fill::after {
       content: '';
       position: absolute;
@@ -152,7 +143,6 @@
       font-weight: 500;
     }
 
-    /* Инпуты */
     .input-wrapper {
       position: relative;
       margin-bottom: 12px;
@@ -167,7 +157,7 @@
       font-size: 1.2rem;
     }
 
-    input[type="text"], input[type="number"] {
+    input[type="text"], input[type="number"], select {
       width: 100%;
       background: rgba(0, 0, 0, 0.2);
       border: 1px solid var(--card-border);
@@ -180,11 +170,20 @@
       outline: none;
     }
 
-    input:focus {
+    select {
+      appearance: none;
+      cursor: pointer;
+    }
+
+    select option {
+      background: #18181b;
+      color: white;
+    }
+
+    input:focus, select:focus {
       border-color: var(--accent);
     }
 
-    /* Маленький инпут для лимита */
     input.limit-input {
       width: 80px;
       padding: 8px 12px;
@@ -232,10 +231,8 @@
 
     button.btn-add:active {
       transform: scale(0.98);
-      box-shadow: 0 2px 8px rgba(99, 102, 241, 0.2);
     }
 
-    /* Список покупок */
     .list-header {
       font-weight: 600;
       font-size: 1.1rem;
@@ -264,10 +261,6 @@
       border: 1px solid transparent;
       transition: border-color 0.2s ease;
     }
-    
-    .expense-item:hover {
-      border-color: var(--card-border);
-    }
 
     .item-info {
       display: flex;
@@ -279,7 +272,28 @@
     .item-tag { font-size: 0.75rem; color: var(--color-yellow); display: flex; align-items: center; gap: 4px; }
     .item-price { font-weight: 700; font-size: 1.1rem; }
 
-    /* История/Календарь */
+    .action-btns {
+      display: flex;
+      gap: 8px;
+    }
+
+    .icon-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--card-border);
+      color: var(--text-muted);
+      border-radius: 10px;
+      padding: 8px;
+      cursor: pointer;
+      font-size: 1.1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+    }
+
+    .icon-btn.delete:hover { color: var(--color-red); border-color: var(--color-red); }
+    .icon-btn.edit:hover { color: var(--accent); border-color: var(--accent); }
+
     .history-grid {
       display: flex;
       flex-direction: column;
@@ -314,22 +328,21 @@
 
     .history-total { font-weight: 800; font-size: 1.2rem; }
 
-    /* Плавающая панель навигации (как в iOS) */
     .bottom-nav {
       position: fixed;
       bottom: 20px;
       left: 50%;
       transform: translateX(-50%);
-      width: calc(100% - 40px);
-      max-width: 400px;
-      background: rgba(24, 24, 27, 0.8);
+      width: calc(100% - 30px);
+      max-width: 420px;
+      background: rgba(24, 24, 27, 0.85);
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
       border: 1px solid var(--card-border);
       border-radius: 24px;
       display: flex;
       justify-content: space-around;
-      padding: 8px 8px;
+      padding: 6px;
       z-index: 100;
       box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
     }
@@ -341,7 +354,7 @@
       color: var(--text-muted);
       padding: 10px 0;
       border-radius: 16px;
-      font-size: 0.85rem;
+      font-size: 0.8rem;
       font-weight: 600;
       cursor: pointer;
       display: flex;
@@ -352,7 +365,7 @@
       font-family: 'Inter', sans-serif;
     }
 
-    .nav-btn i { font-size: 1.5rem; transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+    .nav-btn i { font-size: 1.4rem; transition: transform 0.3s ease; }
     
     .nav-btn.active {
       color: var(--text-main);
@@ -364,14 +377,36 @@
       transform: translateY(-2px) scale(1.1);
     }
 
+    /* Модальное окно редактирования */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(8px);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      z-index: 200;
+    }
+
+    .modal-overlay.active { display: flex; }
+
+    .modal {
+      width: 100%;
+      max-width: 360px;
+      background: #18181b;
+      border: 1px solid var(--card-border);
+      border-radius: 24px;
+      padding: 20px;
+    }
+
   </style>
 </head>
 <body>
 
   <!-- Вкладка: Главная -->
   <div id="view-main" class="view active container">
-    
-    <!-- Карточка лимита и бюджета -->
     <div class="card">
       <div class="header">
         <div class="date-title"><i class='bx bx-calendar'></i> <span id="currentDate"></span></div>
@@ -382,7 +417,6 @@
       </div>
 
       <div class="dashboard">
-        <!-- Красивый градусник -->
         <div class="thermo-container">
           <div id="thermoFill" class="thermo-fill"></div>
         </div>
@@ -395,7 +429,6 @@
       </div>
     </div>
 
-    <!-- Карточка добавления расхода -->
     <div class="card">
       <div class="list-header"><i class='bx bx-plus-circle'></i> Новая запись</div>
       
@@ -411,7 +444,7 @@
       
       <label class="checkbox-wrapper">
         <input type="checkbox" id="isFixed"> 
-        <span><b>Фиксированный платеж</b> (интернет, проезд и т.д. — не сжигает лимит)</span>
+        <span><b>Фиксированный платеж</b> (не сжигает лимит)</span>
       </label>
       
       <button class="btn-add" onclick="addExpense()">
@@ -419,23 +452,39 @@
       </button>
     </div>
 
-    <!-- Список покупок -->
     <div class="card">
       <div class="list-header"><i class='bx bx-list-ul'></i> История за сегодня</div>
-      <ul class="expense-list" id="expensesList">
-        <!-- Сюда добавляются элементы -->
-      </ul>
+      <ul class="expense-list" id="expensesList"></ul>
     </div>
-    
   </div>
 
-  <!-- Вкладка: Календарь (История) -->
+  <!-- Вкладка: Календарь -->
   <div id="view-calendar" class="view container">
-    <div class="card" style="padding: 24px 20px;">
+    <div class="card">
       <h2 style="margin: 0 0 20px 0; font-size: 1.5rem; display: flex; align-items: center; gap: 10px;">
         <i class='bx bx-history' style="color: var(--accent);"></i> Вся история
       </h2>
       <div id="historyContainer" class="history-grid"></div>
+    </div>
+  </div>
+
+  <!-- Вкладка: Правка/Администрирование -->
+  <div id="view-edit" class="view container">
+    <div class="card">
+      <h2 style="margin: 0 0 15px 0; font-size: 1.4rem; display: flex; align-items: center; gap: 10px;">
+        <i class='bx bx-slider-alt' style="color: var(--accent);"></i> Управление
+      </h2>
+      
+      <div style="margin-bottom: 15px;">
+        <label style="font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 6px;">Выберите дату для редактирования:</label>
+        <div class="input-wrapper">
+          <i class='bx bx-calendar-event'></i>
+          <select id="editDateSelect" onchange="renderEditList()"></select>
+        </div>
+      </div>
+
+      <div class="list-header"><i class='bx bx-edit'></i> Записи за выбранный день</div>
+      <ul class="expense-list" id="editExpensesList"></ul>
     </div>
   </div>
 
@@ -449,16 +498,46 @@
       <i class='bx bxs-calendar'></i>
       <span>Календарь</span>
     </button>
+    <button class="nav-btn" onclick="switchTab('edit')" id="btn-edit">
+      <i class='bx bxs-edit-alt'></i>
+      <span>Правка</span>
+    </button>
+  </div>
+
+  <!-- Модальное окно редактирования отдельного товара -->
+  <div class="modal-overlay" id="editModal">
+    <div class="modal">
+      <h3 style="margin-top: 0;">Изменить позицию</h3>
+      <input type="hidden" id="modalItemId">
+      
+      <div class="input-wrapper">
+        <i class='bx bx-purchase-tag-alt'></i>
+        <input type="text" id="modalItemName" placeholder="Название">
+      </div>
+      
+      <div class="input-wrapper">
+        <i class='bx bx-ruble'></i>
+        <input type="number" id="modalItemPrice" placeholder="Цена (BYN)" step="0.1">
+      </div>
+
+      <label class="checkbox-wrapper">
+        <input type="checkbox" id="modalIsFixed"> 
+        <span>Фиксированный платеж</span>
+      </label>
+
+      <div style="display: flex; gap: 10px; margin-top: 20px;">
+        <button class="btn-add" style="background: rgba(255,255,255,0.1); color: white;" onclick="closeModal()">Отмена</button>
+        <button class="btn-add" onclick="saveEditedItem()">Сохранить</button>
+      </div>
+    </div>
   </div>
 
   <script>
-    // Инициализация Telegram WebApp
     const tg = window.Telegram.WebApp;
     tg.expand();
     tg.setHeaderColor('#09090b');
     tg.setBackgroundColor('#09090b');
 
-    // Получаем текущую дату по МСК
     function getMskDateStr() {
       const options = { timeZone: 'Europe/Moscow', day: '2-digit', month: '2-digit', year: 'numeric' };
       return new Intl.DateTimeFormat('ru-RU', options).format(new Date());
@@ -467,7 +546,6 @@
     const todayStr = getMskDateStr();
     document.getElementById('currentDate').innerText = todayStr;
 
-    // Работа с LocalStorage
     function getStorageData() {
       return JSON.parse(localStorage.getItem('finTrackerPro') || '{}');
     }
@@ -476,17 +554,17 @@
       localStorage.setItem('finTrackerPro', JSON.stringify(data));
     }
 
-    // Переключение вкладок
     function switchTab(tabName) {
-      document.getElementById('view-main').classList.remove('active');
-      document.getElementById('view-calendar').classList.remove('active');
-      document.getElementById('btn-main').classList.remove('active');
-      document.getElementById('btn-calendar').classList.remove('active');
+      ['main', 'calendar', 'edit'].forEach(t => {
+        document.getElementById(`view-${t}`).classList.remove('active');
+        document.getElementById(`btn-${t}`).classList.remove('active');
+      });
 
       document.getElementById(`view-${tabName}`).classList.add('active');
       document.getElementById(`btn-${tabName}`).classList.add('active');
 
       if (tabName === 'calendar') renderCalendar();
+      else if (tabName === 'edit') initEditView();
       else updateUI();
     }
 
@@ -496,22 +574,36 @@
       const isFixed = document.getElementById('isFixed').checked;
 
       if (!name || isNaN(price) || price <= 0) {
-        tg.HapticFeedback.notificationOccurred('error');
+        if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
         return;
       }
 
       const data = getStorageData();
       if (!data[todayStr]) data[todayStr] = [];
 
-      data[todayStr].push({ name, price, isFixed, id: Date.now() });
+      data[todayStr].push({ id: Date.now(), name, price, isFixed });
       saveStorageData(data);
 
       document.getElementById('itemName').value = '';
       document.getElementById('itemPrice').value = '';
       document.getElementById('isFixed').checked = false;
 
-      tg.HapticFeedback.notificationOccurred('success');
+      if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
       updateUI();
+    }
+
+    function deleteExpense(dateStr, itemId) {
+      const data = getStorageData();
+      if (data[dateStr]) {
+        data[dateStr] = data[dateStr].filter(item => item.id !== itemId);
+        if (data[dateStr].length === 0) delete data[dateStr];
+        saveStorageData(data);
+      }
+      if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('warning');
+      updateUI();
+      if (document.getElementById('view-edit').classList.contains('active')) {
+        initEditView();
+      }
     }
 
     function updateUI() {
@@ -537,23 +629,23 @@
             <span class="item-name">${item.name}</span>
             ${item.isFixed ? `<span class="item-tag"><i class='bx bxs-star'></i> Фикс. платеж</span>` : ''}
           </div>
-          <span class="item-price">${item.price.toFixed(2)}</span>
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <span class="item-price">${item.price.toFixed(2)}</span>
+            <button class="icon-btn delete" onclick="deleteExpense('${todayStr}', ${item.id})"><i class='bx bx-trash'></i></button>
+          </div>
         `;
         listEl.appendChild(li);
       });
 
-      // Обновление цифр
       document.getElementById('totalSpent').innerText = dailyTotal.toFixed(2);
       document.getElementById('limitInfo').innerText = `из ${limit.toFixed(2)} BYN`;
 
-      // Расчет красивого градусника
       const fillEl = document.getElementById('thermoFill');
       const textEl = document.getElementById('totalSpent');
       let percentage = Math.min((dailyTotal / limit) * 100, 100);
       
       fillEl.style.height = `${percentage}%`;
 
-      // Плавная смена цветов ртути в зависимости от трат
       let color = 'var(--color-green)';
       let shadow = 'rgba(16, 185, 129, 0.5)';
       
@@ -610,7 +702,7 @@
         card.innerHTML = `
           <div class="history-date">
             <span class="status-ring" style="color: ${color}; background-color: ${color};"></span>
-            ${isToday ? 'Сегодня' : date}
+            ${isToday ? 'Сегодня (' + date + ')' : date}
           </div>
           <div class="history-total" style="color: ${color}">${spent.toFixed(2)} BYN</div>
         `;
@@ -618,7 +710,107 @@
       });
     }
 
-    // Старт
+    /* Логика раздела "Правка" */
+    function initEditView() {
+      const data = getStorageData();
+      const select = document.getElementById('editDateSelect');
+      select.innerHTML = '';
+
+      const dates = Object.keys(data).sort((a, b) => {
+        const [d1, m1, y1] = a.split('.');
+        const [d2, m2, y2] = b.split('.');
+        return new Date(y2, m2 - 1, d2) - new Date(y1, m1 - 1, d1);
+      });
+
+      if (dates.length === 0) {
+        select.innerHTML = '<option value="">Нет записанных дней</option>';
+        document.getElementById('editExpensesList').innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 10px;">Нет данных</div>';
+        return;
+      }
+
+      dates.forEach(date => {
+        const opt = document.createElement('option');
+        opt.value = date;
+        opt.innerText = date === todayStr ? `Сегодня (${date})` : date;
+        select.appendChild(opt);
+      });
+
+      renderEditList();
+    }
+
+    function renderEditList() {
+      const selectedDate = document.getElementById('editDateSelect').value;
+      const data = getStorageData();
+      const items = data[selectedDate] || [];
+      const listEl = document.getElementById('editExpensesList');
+      listEl.innerHTML = '';
+
+      if (items.length === 0) {
+        listEl.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 10px;">В этот день не было покупок</div>';
+        return;
+      }
+
+      items.forEach(item => {
+        const li = document.createElement('li');
+        li.className = 'expense-item';
+        li.innerHTML = `
+          <div class="item-info">
+            <span class="item-name">${item.name}</span>
+            <span class="item-price" style="font-size: 0.95rem; color: var(--text-muted);">${item.price.toFixed(2)} BYN ${item.isFixed ? '(Фикс.)' : ''}</span>
+          </div>
+          <div class="action-btns">
+            <button class="icon-btn edit" onclick="openEditModal('${selectedDate}', ${item.id})"><i class='bx bx-pencil'></i></button>
+            <button class="icon-btn delete" onclick="deleteExpense('${selectedDate}', ${item.id})"><i class='bx bx-trash'></i></button>
+          </div>
+        `;
+        listEl.appendChild(li);
+      });
+    }
+
+    function openEditModal(dateStr, itemId) {
+      const data = getStorageData();
+      const item = (data[dateStr] || []).find(i => i.id === itemId);
+      if (!item) return;
+
+      document.getElementById('modalItemId').value = itemId;
+      document.getElementById('modalItemName').value = item.name;
+      document.getElementById('modalItemPrice').value = item.price;
+      document.getElementById('modalIsFixed').checked = item.isFixed;
+
+      document.getElementById('editModal').classList.add('active');
+    }
+
+    function closeModal() {
+      document.getElementById('editModal').classList.remove('active');
+    }
+
+    function saveEditedItem() {
+      const selectedDate = document.getElementById('editDateSelect').value;
+      const itemId = parseInt(document.getElementById('modalItemId').value);
+      const name = document.getElementById('modalItemName').value.trim();
+      const price = parseFloat(document.getElementById('modalItemPrice').value);
+      const isFixed = document.getElementById('modalIsFixed').checked;
+
+      if (!name || isNaN(price) || price <= 0) return;
+
+      const data = getStorageData();
+      if (data[selectedDate]) {
+        const item = data[selectedDate].find(i => i.id === itemId);
+        if (item) {
+          item.name = name;
+          item.price = price;
+          item.isFixed = isFixed;
+          saveStorageData(data);
+        }
+      }
+
+      closeModal();
+      if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+      renderEditList();
+      updateUI();
+    }
+
+    // Инициализация
     updateUI();
   </script>
 </body>
