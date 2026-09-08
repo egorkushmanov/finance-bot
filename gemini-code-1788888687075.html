@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Финансовый Трекер</title>
+  <!-- Подключаем Telegram WebApp SDK -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    :root {
+      --bg-color: #0f141d;
+      --card-bg: #1a212d;
+      --accent: #4e80ee;
+      --text: #ffffff;
+      --text-sub: #8d96a5;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text);
+      margin: 0;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .card {
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .date-title {
+      font-size: 1.2rem;
+      font-weight: bold;
+    }
+    .budget-container {
+      display: flex;
+      gap: 20px;
+      align-items: center;
+      margin-top: 15px;
+    }
+    /* Градусник расходов */
+    .thermometer-wrapper {
+      width: 24px;
+      height: 140px;
+      background: #2a3444;
+      border-radius: 12px;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column-reverse;
+    }
+    .thermometer-fill {
+      width: 100%;
+      height: 0%;
+      background: #2ecc71;
+      transition: height 0.4s ease, background-color 0.4s ease;
+    }
+    .info-panel {
+      flex: 1;
+    }
+    .amount {
+      font-size: 1.8rem;
+      font-weight: bold;
+      margin: 5px 0;
+    }
+    /* Форма ввода */
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    input, select {
+      background: #2a3444;
+      border: 1px solid #3a475a;
+      border-radius: 10px;
+      padding: 10px;
+      color: white;
+      font-size: 1rem;
+    }
+    button {
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      padding: 12px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .expense-list {
+      list-style: none;
+      padding: 0;
+      margin: 10px 0 0 0;
+    }
+    .expense-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid #2a3444;
+      font-size: 0.95rem;
+    }
+    .tag-fixed {
+      color: #f1c40f;
+      font-size: 0.8rem;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Блок настройки суточного лимита -->
+  <div class="card">
+    <div class="header">
+      <span>Дневной лимит (BYN)</span>
+      <input type="number" id="dailyLimit" value="20" style="width: 70px;" onchange="updateUI()">
+    </div>
+  </div>
+
+  <!-- Главный экран текущего дня -->
+  <div class="card">
+    <div class="header">
+      <div class="date-title" id="currentDate">08.09.2026</div>
+    </div>
+    
+    <div class="budget-container">
+      <!-- Градусник -->
+      <div class="thermometer-wrapper">
+        <div id="thermoFill" class="thermometer-fill"></div>
+      </div>
+      
+      <div class="info-panel">
+        <div style="color: var(--text-sub); font-size: 0.85rem;">Потрачено за день:</div>
+        <div class="amount" id="totalSpent">0.00 руб.</div>
+        <div style="color: var(--text-sub); font-size: 0.85rem;" id="limitInfo">из 20.00 руб.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Добавление покупки -->
+  <div class="card">
+    <div style="font-weight: bold; margin-bottom: 8px;">Добавить расход</div>
+    <div class="input-group">
+      <input type="text" id="itemName" placeholder="Название (напр. Энергетик Gorilla)">
+      <input type="number" id="itemPrice" placeholder="Цена (руб.)" step="0.1">
+      <label style="font-size: 0.85rem; display: flex; align-items: center; gap: 8px;">
+        <input type="checkbox" id="isFixed"> Обязательный платеж (интернет, и т.д. — не счит. в 20 руб)
+      </label>
+      <button onclick="addExpense()">Добавить</button>
+    </div>
+  </div>
+
+  <!-- Список покупок за сегодня -->
+  <div class="card">
+    <div style="font-weight: bold;">Покупки за сегодня</div>
+    <ul class="expense-list" id="expensesList"></ul>
+  </div>
+
+  <script>
+    const tg = window.Telegram.WebApp;
+    tg.expand(); // Разворачивает приложение на весь экран
+
+    const todayStr = new Date().toLocaleDateString('ru-RU');
+    document.getElementById('currentDate').innerText = todayStr;
+
+    function getStorageData() {
+      return JSON.parse(localStorage.getItem('finData') || '{}');
+    }
+
+    function saveStorageData(data) {
+      localStorage.setItem('finData', JSON.stringify(data));
+    }
+
+    function addExpense() {
+      const name = document.getElementById('itemName').value.trim();
+      const price = parseFloat(document.getElementById('itemPrice').value);
+      const isFixed = document.getElementById('isFixed').checked;
+
+      if (!name || isNaN(price) || price <= 0) return;
+
+      const data = getStorageData();
+      if (!data[todayStr]) data[todayStr] = [];
+
+      data[todayStr].push({ name, price, isFixed });
+      saveStorageData(data);
+
+      document.getElementById('itemName').value = '';
+      document.getElementById('itemPrice').value = '';
+      document.getElementById('isFixed').checked = false;
+
+      updateUI();
+    }
+
+    function updateUI() {
+      const limit = parseFloat(document.getElementById('dailyLimit').value) || 20;
+      const data = getStorageData();
+      const todayExpenses = data[todayStr] || [];
+
+      let dailyTotal = 0;
+      const listEl = document.getElementById('expensesList');
+      listEl.innerHTML = '';
+
+      todayExpenses.forEach(item => {
+        if (!item.isFixed) {
+          dailyTotal += item.price;
+        }
+        
+        const li = document.createElement('li');
+        li.className = 'expense-item';
+        li.innerHTML = `
+          <span>${item.name} ${item.isFixed ? '<span class="tag-fixed">(Фикс.)</span>' : ''}</span>
+          <span><b>${item.price.toFixed(2)} руб.</b></span>
+        `;
+        listEl.appendChild(li);
+      });
+
+      document.getElementById('totalSpent').innerText = `${dailyTotal.toFixed(2)} руб.`;
+      document.getElementById('limitInfo').innerText = `из ${limit.toFixed(2)} руб.`;
+
+      // Расчет градусника
+      const fillEl = document.getElementById('thermoFill');
+      let percentage = Math.min((dailyTotal / limit) * 100, 100);
+      fillEl.style.height = `${percentage}%`;
+
+      // Изменение цвета от зеленого к красному
+      if (dailyTotal >= limit) {
+        fillEl.style.backgroundColor = '#e74c3c'; // Красный
+      } else if (dailyTotal >= limit * 0.75) {
+        fillEl.style.backgroundColor = '#e67e22'; // Оранжевый
+      } else if (dailyTotal >= limit * 0.5) {
+        fillEl.style.backgroundColor = '#f1c40f'; // Желтый
+      } else {
+        fillEl.style.backgroundColor = '#2ecc71'; // Зеленый
+      }
+    }
+
+    updateUI();
+  </script>
+</body>
+</html>
